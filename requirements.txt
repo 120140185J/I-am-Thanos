@@ -1,0 +1,5 @@
+Instalasi Dependencies:
+- NumPy
+- OpenCV
+- librosa
+- MediaPipe
