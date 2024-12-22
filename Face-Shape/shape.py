@@ -13,14 +13,35 @@ face_mesh = mp_face_mesh.FaceMesh(
 # Inisialisasi webcam
 cap = cv2.VideoCapture(0)
 
-# Fungsi untuk mengubah warna menjadi ungu (warna khas Thanos)
-def apply_thanos_color(image):
-    # Mengubah intensitas warna ungu
-    purple_tint = image.copy()
-    purple_tint[:, :, 0] = image[:, :, 0] * 1.2  # Meningkatkan komponen biru
-    purple_tint[:, :, 1] = image[:, :, 1] * 0.8  # Menurunkan komponen hijau
-    purple_tint[:, :, 2] = image[:, :, 2] * 1.1  # Meningkatkan komponen merah
-    return purple_tint
+def modify_face_shape(image, face_points):
+    h, w = image.shape[:2]
+    
+    # Titik-titik kunci untuk modifikasi bentuk wajah Thanos
+    jaw_points = face_points[152:175]  # Points for jaw line
+    chin_point = face_points[152]      # Center of chin
+    
+    # Pelebaran rahang
+    jaw_modifier = 1.2  # Faktor skala untuk rahang
+    
+    # Membuat mesh deformasi
+    output = image.copy()
+    
+    # Membuat triangulasi untuk area wajah
+    rect = (0, 0, w, h)
+    subdiv = cv2.Subdiv2D(rect)
+    
+    for point in face_points:
+        subdiv.insert(point)
+    
+    # Aplikasikan deformasi pada rahang
+    for point in jaw_points:
+        x, y = point
+        center_x = chin_point[0]
+        # Geser titik horizontal untuk membuat rahang lebih lebar
+        new_x = center_x + (x - center_x) * jaw_modifier
+        cv2.circle(output, (int(new_x), y), 1, (0, 255, 0), -1)
+    
+    return output
 
 while cap.isOpened():
     success, image = cap.read()
@@ -44,29 +65,18 @@ while cap.isOpened():
                 y = int(landmark.y * h)
                 face_points.append((x, y))
             
-            # Membuat mask untuk area wajah
-            mask = np.zeros((h, w), dtype=np.uint8)
-            face_points_array = np.array(face_points)
-            hull = cv2.convexHull(face_points_array)
-            cv2.fillConvexPoly(mask, hull, 255)
+            # Modifikasi bentuk wajah
+            image = modify_face_shape(image, face_points)
             
-            # Aplikasikan efek Thanos pada area wajah
-            thanos_effect = apply_thanos_color(image)
-            
-            # Gabungkan efek dengan gambar asli menggunakan mask
-            mask_3d = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-            image = np.where(mask_3d > 0, thanos_effect, image)
-            
-            # Tambahkan garis tepi wajah
-            cv2.polylines(image, [hull], True, (145, 0, 145), 2)
+            # Visualisasi landmark wajah
+            hull = cv2.convexHull(np.array(face_points))
+            cv2.polylines(image, [hull], True, (0, 255, 0), 1)
 
     # Tampilkan hasil
-    cv2.imshow('Thanos Face Effect', image)
+    cv2.imshow('Thanos Face Shape', image)
     
-    # Tekan 'q' untuk keluar
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Bersihkan resources
 cap.release()
 cv2.destroyAllWindows()
