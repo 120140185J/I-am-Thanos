@@ -1,5 +1,6 @@
 Instalasi Dependencies:
 - NumPy
 - OpenCV
-- librosa
+- PyAudio
 - MediaPipe
+- SciPy.signal
