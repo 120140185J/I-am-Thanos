@@ -2,11 +2,10 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import pyaudio
+import threading
 from scipy.signal import butter, lfilter
 
-# =====================================
-# Bagian 1: Manipulasi Bentuk Wajah
-# =====================================
+# Inisialisasi MediaPipe Face Mesh untuk deteksi wajah
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(
     max_num_faces=1,
@@ -14,132 +13,132 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_tracking_confidence=0.5
 )
 
-def modify_face_shape(image, face_landmarks):
-    h, w = image.shape[:2]
-    jaw_points = [face_landmarks[i] for i in range(152, 175)]  # Landmark rahang
-    chin_point = face_landmarks[152]  # Titik dagu tengah
-    jaw_modifier = 1.2  # Faktor skala untuk pelebaran rahang
-    modified_image = image.copy()
-    
-    for point in jaw_points:
-        x, y = point
-        center_x = chin_point[0]
-        # Geser horizontal untuk memperlebar wajah
-        new_x = center_x + (x - center_x) * jaw_modifier
-        cv2.circle(modified_image, (int(new_x), int(y)), 2, (0, 255, 0), -1)
-    return modified_image
-
-# =====================================
-# Bagian 2: Manipulasi Warna Wajah
-# =====================================
-def apply_thanos_color(frame, face_landmarks):
-    height, width, _ = frame.shape
-    mask = np.zeros((height, width), dtype=np.uint8)
-
-    for landmark in face_landmarks:
-        x, y = int(landmark[0]), int(landmark[1])
-        cv2.circle(mask, (x, y), 2, 255, -1)
-
-    # Blur untuk menghaluskan masker
-    mask = cv2.GaussianBlur(mask, (51, 51), 0)
-    frame[mask > 0] = cv2.addWeighted(frame[mask > 0], 0.5, (128, 0, 128), 0.5, 0)
-    return frame
-
-# =====================================
-# Bagian 3: Manipulasi Suara
-# =====================================
-CHUNK = 2048
-FORMAT = pyaudio.paInt16
+# Konfigurasi audio
+CHUNK = 1024  # Ukuran chunk dikurangi untuk mengurangi latency
+FORMAT = pyaudio.paFloat32  # Menggunakan format float32 untuk kualitas lebih baik
 CHANNELS = 1
 RATE = 44100
-NOISE_THRESHOLD = 1000
-TARGET_PEAK = 20000
+NOISE_THRESHOLD = 0.02
 
-def low_pass_filter(data, cutoff, fs, order=5):
-    nyquist = 0.5 * fs
-    normal_cutoff = cutoff / nyquist
-    b, a = butter(order, normal_cutoff, btype="low", analog=False)
-    return lfilter(b, a, data)
+def modify_face_shape(image, landmarks):
+    """
+    Fungsi untuk memodifikasi bentuk wajah:
+    - Memperlebar bagian rahang
+    - Membuat wajah lebih kekar
+    """
+    h, w = image.shape[:2]
+    mask = np.zeros((h, w), dtype=np.uint8)
+    
+    # Konversi landmark ke array numpy untuk memudahkan manipulasi
+    points = np.array([(int(lm.x * w), int(lm.y * h)) for lm in landmarks.landmark])
+    
+    # Perlebar rahang (20%)
+    jaw_points = points[152:175]
+    center = np.mean(jaw_points, axis=0)
+    jaw_points = (jaw_points - center) * 1.2 + center
+    
+    # Gambar mask wajah
+    cv2.fillConvexPoly(mask, points.astype(int), 255)
+    
+    return mask
 
-def pitch_shift(data, pitch_factor):
-    indices = np.arange(0, len(data), pitch_factor)
-    indices = indices[indices < len(data)]
-    return np.interp(indices, np.arange(len(data)), data).astype(data.dtype)
+def apply_thanos_color(frame, mask):
+    """
+    Fungsi untuk memberikan efek warna ungu Thanos:
+    - Menerapkan warna ungu pada area wajah
+    - Mempertahankan detail dan tekstur wajah
+    """
+    # Warna ungu Thanos (R,G,B)
+    thanos_color = np.array([128, 0, 128], dtype=np.float32)
+    
+    # Blur mask untuk transisi halus
+    mask = cv2.GaussianBlur(mask, (15, 15), 0)
+    mask = mask / 255.0
+    
+    # Aplikasikan warna dengan mempertahankan tekstur
+    result = frame.copy()
+    for c in range(3):
+        result[:,:,c] = frame[:,:,c] * (1 - mask * 0.5) + thanos_color[c] * mask * 0.5
+        
+    return result
 
-def normalize_audio(data, target_peak=TARGET_PEAK):
-    max_amplitude = np.max(np.abs(data))
-    if max_amplitude == 0:
-        return data
-    scaling_factor = min(1.0, target_peak / max_amplitude)
-    return np.clip(data * scaling_factor, -32768, 32767).astype(np.int16)
+def process_audio(data, pitch_factor=0.7):
+    """
+    Fungsi untuk memproses audio:
+    - Menurunkan pitch suara
+    - Menambah bass
+    - Menghilangkan noise
+    """
+    # Konversi ke float32 untuk pemrosesan
+    audio_data = np.frombuffer(data, dtype=np.float32)
+    
+    # Noise gate
+    if np.max(np.abs(audio_data)) < NOISE_THRESHOLD:
+        return np.zeros_like(audio_data)
+    
+    # Pitch shifting
+    indices = np.arange(0, len(audio_data), pitch_factor)
+    audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data)
+    
+    # Low pass filter untuk menambah bass
+    nyquist = RATE / 2
+    cutoff = 800 / nyquist
+    b, a = butter(4, cutoff, btype='low')
+    audio_data = lfilter(b, a, audio_data)
+    
+    return audio_data.astype(np.float32)
 
-def noise_gate(data, threshold=NOISE_THRESHOLD):
-    max_amplitude = np.max(np.abs(data))
-    if max_amplitude < threshold:
-        return np.zeros_like(data)
-    return data
+def audio_stream():
+    """
+    Fungsi untuk menjalankan stream audio secara real-time
+    """
+    p = pyaudio.PyAudio()
+    stream_in = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    stream_out = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK)
 
-def thanos_effect(audio_chunk, pitch_factor=0.8, cutoff_freq=800):
-    gated_audio = noise_gate(audio_chunk)
-    pitched_audio = pitch_shift(gated_audio, pitch_factor)
-    filtered_audio = low_pass_filter(pitched_audio, cutoff=cutoff_freq, fs=RATE)
-    return normalize_audio(filtered_audio)
+    while True:
+        try:
+            data = stream_in.read(CHUNK)
+            processed = process_audio(data)
+            stream_out.write(processed.tobytes())
+        except:
+            break
 
-def realtime_voice_filter():
-    audio_interface = pyaudio.PyAudio()
-    stream_input = audio_interface.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-    stream_output = audio_interface.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK)
+    stream_in.stop_stream()
+    stream_out.stop_stream()
+    stream_in.close()
+    stream_out.close()
+    p.terminate()
 
-    print("Efek suara Thanos aktif...")
-    try:
-        while True:
-            input_data = stream_input.read(CHUNK, exception_on_overflow=False)
-            audio_chunk = np.frombuffer(input_data, dtype=np.int16)
-            modified_audio = thanos_effect(audio_chunk)
-            stream_output.write(modified_audio.tobytes())
-    except KeyboardInterrupt:
-        pass
-    finally:
-        stream_input.stop_stream()
-        stream_input.close()
-        stream_output.stop_stream()
-        stream_output.close()
-        audio_interface.terminate()
-
-# =====================================
-# Bagian Utama: Menggabungkan Semua Fungsi
-# =====================================
 def main():
+    # Mulai audio processing di thread terpisah
+    audio_thread = threading.Thread(target=audio_stream)
+    audio_thread.daemon = True
+    audio_thread.start()
+    
     cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Error: Tidak dapat mengakses kamera.")
-        return
-
-    audio_process = None
-    try:
-        audio_process = realtime_voice_filter  # Proses suara berjalan paralel
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                print("Error: Tidak dapat membaca frame dari kamera.")
-                break
-
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = face_mesh.process(rgb_frame)
-
-            if results.multi_face_landmarks:
-                for landmarks in results.multi_face_landmarks:
-                    face_points = [(int(lm.x * frame.shape[1]), int(lm.y * frame.shape[0])) for lm in landmarks.landmark]
-                    frame = apply_thanos_color(frame, face_points)
-                    frame = modify_face_shape(frame, face_points)
-
-            cv2.imshow("Thanos Transformation", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    finally:
-        cap.release()
-        cv2.destroyAllWindows()
+    
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            continue
+            
+        # Proses frame untuk deteksi wajah
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(frame_rgb)
+        
+        if results.multi_face_landmarks:
+            for face_landmarks in results.multi_face_landmarks:
+                # Terapkan efek bentuk dan warna
+                mask = modify_face_shape(frame, face_landmarks)
+                frame = apply_thanos_color(frame, mask)
+        
+        cv2.imshow('Thanos Effect', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
