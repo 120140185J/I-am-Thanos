@@ -4,3 +4,9 @@ Instalasi Dependencies:
 - PyAudio
 - MediaPipe
 - SciPy.signal
+
+Cara Instalasi:
+1. Buka terminal
+2. Masuk ke direktori project
+3. Jalankan perintah `pip install -r requirements.txt`
+
