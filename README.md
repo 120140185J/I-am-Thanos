@@ -26,6 +26,6 @@ Logbook:
 
 # Hal yang perlu diperhatikan
 
-1. Kode ada pada Thanos.py
-2. Untuk menjalankan program, ketik python Thanos.py pada terminal (dengan asumsi semua libraries telah di install)
+1. Program ada pada Thanos.py
+2. Untuk menjalankan program, ketik 'python Thanos.py' pada terminal (dengan asumsi semua libraries telah di install)
 3. Program dihentikan dengan menekan Q pada keyboard
