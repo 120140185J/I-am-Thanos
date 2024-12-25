@@ -1,9 +1,11 @@
-Judul: I am Thanos
+# I am Thanos
 
 Anggota:
-Andry Herwansyah
-Justin Halim
-Dandy Arkandhiya Putra
+Andry Herwansyah - 1191140078
+
+Justin Halim - 120140185
+
+Dandy Arkandhiya Putra - 120140203
 
 Deskripsi Proyek:
 Proyek ini menerima input berupa:
