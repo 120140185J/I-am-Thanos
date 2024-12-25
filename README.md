@@ -23,3 +23,9 @@ Logbook:
 | 22 Desember 2024 | 19.00-22.00 | Brainstorming program        |
 | 23 Desember 2024 | 19.00-21.00 | Pengerjaan Laporan           |
 | 24 Desember 2024 | 23.00       | Submit Tugas Besar           |
+
+# Hal yang perlu diperhatikan
+
+1. Kode ada pada Thanos.py
+2. Untuk menjalankan program, ketik python Thanos.py pada terminal (dengan asumsi semua libraries telah di install)
+3. Program dihentikan dengan menekan Q pada keyboard
