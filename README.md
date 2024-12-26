@@ -8,6 +8,10 @@ Justin Halim - 120140185
 
 Dandy Arkandhiya Putra - 120140203
 
+Proyek ini adalah tugas mata kuliah IF4021 Prodi Teknik Informatika ITERA
+
+Dosen Pengampu: Martin Clinton Tosima Manullang, S.T., M.T.
+
 Deskripsi Proyek:
 Proyek ini menerima input berupa:
 
