@@ -1,12 +1,5 @@
-Instalasi Dependencies:
-- NumPy
-- OpenCV
-- PyAudio
-- MediaPipe
-- SciPy.signal
-
-Cara Instalasi:
-1. Buka terminal
-2. Masuk ke direktori project
-3. Jalankan perintah `pip install -r requirements.txt`
-
+NumPy >= 1.26.4
+OpenCV >= 4.10.0
+PyAudio >= 0.2.14
+MediaPipe >= 0.10.20
+SciPy.signal >= 1.14.1
