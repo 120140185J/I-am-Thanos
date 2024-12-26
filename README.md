@@ -1,6 +1,11 @@
 # I am Thanos
 
-Anggota:
+Proyek ini adalah tugas mata kuliah IF4021 Prodi Teknik Informatika ITERA
+
+Dosen Pengampu: Martin Clinton Tosima Manullang, S.T., M.T.
+
+
+## Anggota:
 
 Andry Herwansyah - 1191140078
 
@@ -8,17 +13,13 @@ Justin Halim - 120140185
 
 Dandy Arkandhiya Putra - 120140203
 
-Proyek ini adalah tugas mata kuliah IF4021 Prodi Teknik Informatika ITERA
-
-Dosen Pengampu: Martin Clinton Tosima Manullang, S.T., M.T.
-
-Deskripsi Proyek:
+## Deskripsi Proyek:
 Proyek ini menerima input berupa:
 
 - video ekspresi marah wajah pengguna. output dari video akan merubah kulit wajah menjadi ungu dan memperlebar wajah agar mirip Thanos.
 - Suara pengguna yang akan diubah menjadi lebih berat menyerupai Thanos.
 
-Logbook:
+## Logbook:
 
 | Tanggal          | Waktu       | Kegiatan                     |
 | ---------------- | ----------- | ---------------------------- |
