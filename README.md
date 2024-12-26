@@ -27,5 +27,6 @@ Logbook:
 # Hal yang perlu diperhatikan
 
 1. Program ada pada Thanos.py
-2. Untuk menjalankan program, ketik 'python Thanos.py' pada terminal (dengan asumsi semua libraries telah di install)
-3. Program dihentikan dengan menekan Q pada keyboard
+2. Install Libraries yang diperlukan dengan execute pada terminal: 'pip install -U -r requirements.txt' .
+3. Untuk menjalankan program, ketik 'python Thanos.py' pada terminal (dengan asumsi semua libraries telah di install)
+4. Program dihentikan dengan menekan Q pada keyboard
